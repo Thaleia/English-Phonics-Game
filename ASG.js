@@ -1,3 +1,4 @@
+
 const letters = {
     A: { animal: 'alligator', image: 'ASG.pictures/alligator.png' },
     B: { animal: 'bear', image: 'ASG.pictures/bear.png' },
@@ -44,9 +45,10 @@ const letters = {
   let isSpeaking = false;
   let answeredCorrectly = false;
   let selectedVoice = null;
+  let hasSpokenImage = false;
   
   function getRandomLetter(excludeLetter = '') {
-    const keys = Object.keys(letters).filter(letter => letter !== excludeLetter);
+    const keys = Object.keys(letters).filter(l => l !== excludeLetter);
     return keys[Math.floor(Math.random() * keys.length)];
   }
   
@@ -60,7 +62,6 @@ const letters = {
     return Array.from(options).sort(() => 0.5 - Math.random());
   }
   
-  // Load voices and select best available
   function setVoice() {
     const voices = speechSynthesis.getVoices();
     selectedVoice = voices.find(v => v.name.includes('Google UK English Female')) ||
@@ -68,7 +69,6 @@ const letters = {
                     voices.find(v => v.name.includes('Zira')) ||
                     voices[0];
   }
-  
   speechSynthesis.onvoiceschanged = setVoice;
   
   function speak(text, delay = 0) {
@@ -80,31 +80,18 @@ const letters = {
     }, delay);
   }
   
-  function speakSequenceOnce(parts, delay = 0, step = 50) {
-    if (isSpeaking) return;
-    isSpeaking = true;
-    parts.forEach((text, index) => {
-      speak(text, delay + index * step);
-    });
-    const totalDuration = delay + parts.length * step;
-    setTimeout(() => {
-      isSpeaking = false;
-    }, totalDuration);
-  }
-  
   function showNewLetter(letter) {
     currentLetter = letter;
     answeredCorrectly = false;
+    hasSpokenImage = false;
     const animal = letters[letter];
-    const sound = phonics[letter] || letter.toLowerCase();
-    animalImage.src = animal.image;
-    message.textContent = '';
-    setTimeout(() => {
-      if (!answeredCorrectly) {
-        speak(animal.animal);
-      }
-    }, 500);
   
+    animalImage.src = animal.image;
+    animalImage.alt = animal.animal;
+  
+    speak(animal.animal, 500);
+  
+    message.textContent = '';
     const optionLetters = generateOptions(letter);
     optionsContainer.innerHTML = '';
     optionLetters.forEach(opt => {
@@ -121,13 +108,11 @@ const letters = {
       const lower = currentLetter.toLowerCase();
       const animal = letters[currentLetter].animal;
       const sound = phonics[currentLetter] || lower;
-      message.textContent = `${lower} ${animal}`;
+      message.textContent = `${lower} ${lower} ${lower} ${animal}`;
       score++;
       answeredCorrectly = true;
       scoreDisplay.textContent = `Score: ${score}`;
-    //   speakSequenceOnce([sound, sound, sound, 'for', animal], 0, 10);
       speak(`${sound}, ${sound}, ${sound} ${animal}`);
-
       confettiEffect(1300);
       setTimeout(() => {
         showNewLetter(getRandomLetter(currentLetter));
@@ -141,25 +126,18 @@ const letters = {
     const end = Date.now() + duration;
     const colors = ['#bb0000', '#ffffff', '#00bb00', '#0000bb', '#ffcc00'];
     (function frame() {
-      confetti({
-        particleCount: 5,
-        angle: 60,
-        spread: 55,
-        origin: { x: 0 },
-        colors: colors,
-      });
-      confetti({
-        particleCount: 5,
-        angle: 120,
-        spread: 55,
-        origin: { x: 1 },
-        colors: colors,
-      });
-      if (Date.now() < end) {
-        requestAnimationFrame(frame);
-      }
+      confetti({ particleCount: 5, angle: 60, spread: 55, origin: { x: 0 }, colors });
+      confetti({ particleCount: 5, angle: 120, spread: 55, origin: { x: 1 }, colors });
+      if (Date.now() < end) requestAnimationFrame(frame);
     })();
   }
+  
+  animalImage.addEventListener('click', () => {
+    if (hasSpokenImage) return;
+    hasSpokenImage = true;
+    const animal = letters[currentLetter].animal;
+    speak(animal);
+  });
   
   showNewLetter(getRandomLetter());
   
